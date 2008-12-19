@@ -1,0 +1,148 @@
+                                                                     
+                                                                     
+                                                                     
+                                             
+--- http.cpp	1969-12-31 18:00:00.000000000 -0600
++++ /usr/local/ruby185/lib/ruby/gems/1.8/gems/eventmachine_httpserver-0.0.1/ext/http.cpp	2007-03-10 08:13:24.000000000 -0600
+@@ -29,6 +29,7 @@
+ #include <string>
+ #include <sstream>
+ #include <stdexcept>
++#include <stdio.h>
+ 
+ #ifdef OS_WIN32
+ #include <windows.h>
+@@ -66,6 +67,7 @@
+ 	// (This is primarily beneficial because it lets the caller use Ruby's CGI classes.)
+ 	// The caller can switch this off in Ruby code, which greatly improves performance.
+ 	bSetEnvironmentStrings = true;
++	bAccumulatePost = true;
+ }
+ 
+ 
+@@ -112,6 +114,7 @@
+ 		const char *query_string,
+ 		const char *path_info,
+ 		const char *request_uri,
++		const char *protocol,
+ 		int post_length,
+ 		const char *post_content,
+ 		const char *hdrblock,
+@@ -121,7 +124,14 @@
+ }
+ 
+ 
++/********************************
++HttpConnection_t::ReceivePostData
++********************************/
+ 
++void HttpConnection_t::ReceivePostData (const char *data, int len)
++{
++	cerr << "UNIMPLEMENTED ReceivePostData" << endl;
++}
+ 
+ /*****************************
+ HttpConnection_t::ConsumeData
+@@ -159,6 +169,7 @@
+ 			PathInfo.clear();
+ 			RequestUri.clear();
+ 			QueryString.clear();
++			Protocol.clear();
+ 
+ 			if (bSetEnvironmentStrings) {
+ 				unsetenv ("REQUEST_METHOD");
+@@ -168,6 +179,7 @@
+ 				unsetenv ("PATH_INFO");
+ 				unsetenv ("REQUEST_URI");
+ 				unsetenv ("QUERY_STRING");
++				unsetenv ("PROTOCOL");
+ 			}
+ 		}
+ 
+@@ -202,9 +214,15 @@
+ 					if (ContentLength > 0) {
+ 						if (_Content)
+ 							free (_Content);
+-						_Content = (char*) malloc (ContentLength + 1);
+-						if (!_Content)
+-							throw std::runtime_error ("resource exhaustion");
++						if (bAccumulatePost) {
++							_Content = (char*) malloc (ContentLength + 1);
++							if (!_Content)
++								throw std::runtime_error ("resource exhaustion");
++						}
++						else {
++							_Content = (char*) malloc (1);
++							_Content = 0;
++						}
+ 						ContentPos = 0;
+ 						ProtocolState = ReadingContentState;
+ 					}
+@@ -241,12 +259,19 @@
+ 			int len = ContentLength - ContentPos;
+ 			if (len > length)
+ 				len = length;
+-			memcpy (_Content + ContentPos, data, len);
++			if (bAccumulatePost) {
++				memcpy (_Content + ContentPos, data, len);
++			} else {
++				ReceivePostData(data,len);
++			}
+ 			data += len;
+ 			length -= len;
+ 			ContentPos += len;
+ 			if (ContentPos == ContentLength) {
+-				_Content[ContentPos] = 0;
++				if (bAccumulatePost) {
++					_Content[ContentPos] = 0;
++				} else {
++				}
+ 				ProtocolState = DispatchState;
+ 			}
+ 		}
+@@ -254,7 +279,7 @@
+ 
+ 		//----------------------------------- DispatchState
+ 		if (ProtocolState == DispatchState) {
+-			ProcessRequest (RequestMethod, Cookie.c_str(), IfNoneMatch.c_str(), ContentType.c_str(), QueryString.c_str(), PathInfo.c_str(), RequestUri.c_str(), ContentLength, _Content, HeaderBlock, HeaderBlockPos);
++			ProcessRequest (RequestMethod, Cookie.c_str(), IfNoneMatch.c_str(), ContentType.c_str(), QueryString.c_str(), PathInfo.c_str(), RequestUri.c_str(), Protocol.c_str(), ContentLength, _Content, HeaderBlock, HeaderBlockPos);
+ 			ProtocolState = BaseState;
+ 		}
+ 	}
+@@ -424,6 +449,9 @@
+ 		return false;
+ 	}
+ 
++	string prot (blank2+1);
++	Protocol = prot.c_str();
++
+ 	// Here, the request starts at blank and ends just before blank2.
+ 	// Find the query-string (?) and/or fragment (#,;), if either are present. 
+ 	const char *questionmark = strchr (blank, '?');
+@@ -444,6 +472,7 @@
+ 			setenv ("PATH_INFO", req.c_str(), true);
+ 			setenv ("REQUEST_URI", req.c_str(), true);
+ 			setenv ("QUERY_STRING", qs.c_str(), true);
++			setenv ("PROTOCOL", prot.c_str(), true);
+ 		}
+ 	}
+ 	else if (fragment) {
+@@ -455,6 +484,7 @@
+ 			setenv ("PATH_INFO", req.c_str(), true);
+ 			setenv ("REQUEST_URI", req.c_str(), true);
+ 			setenv ("QUERY_STRING", "", true);
++			setenv ("PROTOCOL", prot.c_str(), true);
+ 		}
+ 	}
+ 	else {
+@@ -466,9 +496,9 @@
+ 			setenv ("PATH_INFO", req.c_str(), true);
+ 			setenv ("REQUEST_URI", req.c_str(), true);
+ 			setenv ("QUERY_STRING", "", true);
++			setenv ("PROTOCOL", prot.c_str(), true);
+ 		}
+ 	}
+-
+ 	
+ 	return true;
+ }
