@@ -1,5 +1,3 @@
-# $Id: extconf.rb 3896 2007-03-06 20:21:01Z francis $
-#
 #----------------------------------------------------------------------------
 #
 # Copyright (C) 2006-07 by Francis Cianfrocca. All Rights Reserved.

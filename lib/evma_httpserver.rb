@@ -1,5 +1,3 @@
-# $Id: evma_httpserver.rb 3897 2007-03-06 20:21:08Z francis $
-#
 # EventMachine HTTP Server
 #
 # Author:: blackhedd (gmail address: garbagecat10).

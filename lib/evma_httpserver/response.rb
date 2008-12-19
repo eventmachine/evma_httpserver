@@ -1,5 +1,3 @@
-# $Id: response.rb 3897 2007-03-06 20:21:08Z francis $
-#
 # EventMachine HTTP Server
 # HTTP Response-support class
 #

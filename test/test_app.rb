@@ -1,7 +1,3 @@
-# $Id: app.rb 3893 2007-03-06 20:12:09Z francis $
-#
-#
-
 require 'test/unit'
 require 'evma_httpserver'
 
