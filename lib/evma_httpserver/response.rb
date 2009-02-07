@@ -32,6 +32,22 @@
 
 module EventMachine
 
+	# This class provides a wide variety of features for generating and
+	# dispatching HTTP responses. It allows you to conveniently generate
+	# headers and content (including chunks and multiparts), and dispatch
+	# responses (including deferred or partially-complete responses).
+	#
+	# Although HttpResponse is coded as a class, it's not complete as it
+	# stands. It assumes that it has certain of the behaviors of
+	# EventMachine::Connection. You must add these behaviors, either by
+	# subclassing HttpResponse, or using the alternate version of this
+	# class, DelegatedHttpResponse. See the test cases for current information
+	# on which behaviors you have to add.
+	#
+	# TODO, someday it would be nice to provide a version of this functionality
+	# that is coded as a Module, so it can simply be mixed into an instance of
+	# EventMachine::Connection.
+	#
 	class HttpResponse
 		attr_accessor :status, :content, :headers, :chunks, :multiparts
 
@@ -106,7 +122,7 @@ module EventMachine
 		def generate_header_lines in_hash
 			out_ary = []
 			in_hash.keys.sort.each {|k|
-				v = @headers[k]
+				v = in_hash[k]
 				if v.is_a?(Array)
 					v.each {|v1| out_ary << "#{k}: #{v1}\r\n" }
 				else
@@ -255,7 +271,7 @@ module EventMachine
 			end
 		end
 
-		#
+		# TODO, this is going to be way too slow. Cache up the uuidgens.
 		#
 		def self.concoct_multipart_boundary
 			@multipart_index ||= 0
@@ -272,6 +288,25 @@ module EventMachine
 			@status = 302 # TODO, make 301 available by parameter
 			@headers["Location"] = location
 			send_response
+		end
+	end
+end
+
+#----------------------------------------------------------------------------
+
+require 'forwardable'
+
+module EventMachine
+	class DelegatedHttpResponse < HttpResponse
+		extend Forwardable
+		def_delegators :@delegate,
+			:send_data,
+			:close_connection,
+			:close_connection_after_writing
+
+		def initialize dele
+			super()
+			@delegate = dele
 		end
 	end
 end

@@ -85,6 +85,10 @@ void RubyHttpConnection_t::CloseConnection (bool after_writing)
 }
 
 
+/*************************************
+RubyHttpConnection_t::ReceivePostData
+*************************************/
+
 void RubyHttpConnection_t::ReceivePostData (const char *data, int len)
 {
 	VALUE data_val = Qnil;
@@ -203,6 +207,7 @@ t_receive_post_data
 static VALUE t_receive_post_data (VALUE self, VALUE data)
 {
 	/** This is a NOOP.  It should be overridden.  **/
+	return Qnil;
 }
 
 /********
