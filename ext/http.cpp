@@ -170,6 +170,15 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 				_Content = NULL;
 			}
 			RequestMethod = NULL;
+			#ifdef OS_WIN32
+			Cookie.erase(Cookie.begin(),Cookie.end());
+			IfNoneMatch.erase(IfNoneMatch.begin(),IfNoneMatch.end());
+			ContentType.erase(ContentType.begin(),ContentType.end());
+			PathInfo.erase(PathInfo.begin(),PathInfo.end());
+			RequestUri.erase(RequestUri.begin(),RequestUri.end());
+			QueryString.erase(QueryString.begin(),QueryString.end());
+			Protocol.erase(Protocol.begin(),Protocol.end());
+			#else
 			Cookie.clear();
 			IfNoneMatch.clear();
 			ContentType.clear();
@@ -177,6 +186,7 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			RequestUri.clear();
 			QueryString.clear();
 			Protocol.clear();
+			#endif
 
 			if (bSetEnvironmentStrings) {
 				unsetenv ("REQUEST_METHOD");
@@ -482,7 +492,11 @@ bool HttpConnection_t::_InterpretRequest (const char *header)
 		string req (blank, fragment - blank);
 		PathInfo = req.c_str();
 		RequestUri = req.c_str();
+		#ifdef OS_WIN32
+		QueryString.erase(QueryString.begin(),QueryString.end());
+		#else
 		QueryString.clear();
+		#endif
 		if (bSetEnvironmentStrings) {
 			setenv ("PATH_INFO", req.c_str(), true);
 			setenv ("REQUEST_URI", req.c_str(), true);
@@ -494,7 +508,11 @@ bool HttpConnection_t::_InterpretRequest (const char *header)
 		string req (blank, blank2 - blank);
 		PathInfo = req.c_str();
 		RequestUri = req.c_str();
+		#ifdef OS_WIN32
+		QueryString.erase(QueryString.begin(),QueryString.end());
+		#else
 		QueryString.clear();
+		#endif
 		if (bSetEnvironmentStrings) {
 			setenv ("PATH_INFO", req.c_str(), true);
 			setenv ("REQUEST_URI", req.c_str(), true);
