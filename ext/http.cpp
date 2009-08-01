@@ -470,7 +470,8 @@ bool HttpConnection_t::_InterpretRequest (const char *header)
 	const char *questionmark = strchr (blank, '?');
 	if (questionmark && (questionmark >= blank2))
 		questionmark = NULL;
-	const char *fragment = strpbrk ((questionmark ? (questionmark+1) : blank), "#;");
+	// const char *fragment = strpbrk ((questionmark ? (questionmark+1) : blank), "#;");
+	const char *fragment = strpbrk ((questionmark ? (questionmark+1) : blank), "#");
 	if (fragment && (fragment >= blank2))
 		fragment = NULL;
 
