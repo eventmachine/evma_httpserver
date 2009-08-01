@@ -17,8 +17,12 @@
   class MyHttpServer < EM::Connection
     include EM::HttpServer
 
-    def process_http_request
+     def post_init
+       super
+       no_environment_strings
+     end
 
+    def process_http_request
       # the http request details are available via the following instance variables:
       #   @http_protocol
       #   @http_request_method
