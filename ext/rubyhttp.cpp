@@ -182,7 +182,7 @@ static VALUE t_post_init (VALUE self)
 	if (!hc)
 		throw std::runtime_error ("no http-connection object");
 
-	rb_ivar_set (self, rb_intern ("@http______conn"), INT2NUM ((long)hc));
+	rb_ivar_set (self, rb_intern ("@http______conn"), LONG2NUM ((long)hc));
 	return Qnil;
 }
 
@@ -194,7 +194,7 @@ t_receive_data
 static VALUE t_receive_data (VALUE self, VALUE data)
 {
 	int length = NUM2INT (rb_funcall (data, rb_intern ("length"), 0));
-	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2INT (rb_ivar_get (self, rb_intern ("@http______conn"))));
+	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, rb_intern ("@http______conn"))));
 	if (hc)
 		hc->ConsumeData (StringValuePtr (data), length);
 	return Qnil;
@@ -216,7 +216,7 @@ t_unbind
 
 static VALUE t_unbind (VALUE self)
 {
-	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2INT (rb_ivar_get (self, rb_intern ("@http______conn"))));
+	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, rb_intern ("@http______conn"))));
 	if (hc)
 		delete hc;
 	return Qnil;
@@ -240,7 +240,7 @@ t_no_environment_strings
 
 static VALUE t_no_environment_strings (VALUE self)
 {
-	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2INT (rb_ivar_get (self, rb_intern ("@http______conn"))));
+	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, rb_intern ("@http______conn"))));
 	if (hc)
 		hc->SetNoEnvironmentStrings();
 	return Qnil;
@@ -252,7 +252,7 @@ t_dont_accumulate_post
 
 static VALUE t_dont_accumulate_post (VALUE self)
 {
-	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2INT (rb_ivar_get (self, rb_intern ("@http______conn"))));
+	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, rb_intern ("@http______conn"))));
 	if (hc)
 		hc->SetDontAccumulatePost();
 	return Qnil;
