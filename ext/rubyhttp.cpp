@@ -265,17 +265,15 @@ Init_eventmachine_httpserver
 
 extern "C" void Init_eventmachine_httpserver()
 {
-	// INCOMPLETE, we need to define class Connections inside module EventMachine
-  
-	VALUE Monorail = rb_define_module ("EventMachine");
-	VALUE EmModule = rb_define_module_under (Monorail, "HttpServer");
-	rb_define_method (EmModule, "post_init", (VALUE(*)(...))t_post_init, 0);
-	rb_define_method (EmModule, "receive_data", (VALUE(*)(...))t_receive_data, 1);
-	rb_define_method (EmModule, "receive_post_data", (VALUE(*)(...))t_receive_post_data, 1);
-	rb_define_method (EmModule, "unbind", (VALUE(*)(...))t_unbind, 0);
-	rb_define_method (EmModule, "process_http_request", (VALUE(*)(...))t_process_http_request, 0);
-	rb_define_method (EmModule, "no_environment_strings", (VALUE(*)(...))t_no_environment_strings, 0);
-	rb_define_method (EmModule, "dont_accumulate_post", (VALUE(*)(...))t_dont_accumulate_post, 0);
+	Intern_http_conn = rb_intern ("http_conn");
 
-	Intern_http_conn = rb_intern("http_conn");
+	VALUE EmModule = rb_define_module ("EventMachine");
+	VALUE HttpServer = rb_define_module_under (EmModule, "HttpServer");
+	rb_define_method (HttpServer, "post_init", (VALUE(*)(...))t_post_init, 0);
+	rb_define_method (HttpServer, "receive_data", (VALUE(*)(...))t_receive_data, 1);
+	rb_define_method (HttpServer, "receive_post_data", (VALUE(*)(...))t_receive_post_data, 1);
+	rb_define_method (HttpServer, "unbind", (VALUE(*)(...))t_unbind, 0);
+	rb_define_method (HttpServer, "process_http_request", (VALUE(*)(...))t_process_http_request, 0);
+	rb_define_method (HttpServer, "no_environment_strings", (VALUE(*)(...))t_no_environment_strings, 0);
+	rb_define_method (HttpServer, "dont_accumulate_post", (VALUE(*)(...))t_dont_accumulate_post, 0);
 }
