@@ -62,9 +62,9 @@ module EventMachine
 		# sugarings for headers
 		def content_type *mime
 			if mime.length > 0
-				@headers ["Content-type"] = mime.first.to_s
+				@headers["Content-type"] = mime.first.to_s
 			else
-				@headers ["Content-type"]
+				@headers["Content-type"]
 			end
 		end
 
@@ -74,12 +74,12 @@ module EventMachine
 		# added on a prior call. #set_cookie clears them out first.
 		def add_set_cookie *ck
 			if ck.length > 0
-				h = (@headers ["Set-cookie"] ||= [])
+				h = (@headers["Set-cookie"] ||= [])
 				ck.each {|c| h << c}
 			end
 		end
 		def set_cookie *ck
-			h = (@headers ["Set-cookie"] ||= [])
+			h = (@headers["Set-cookie"] ||= [])
 			if ck.length > 0
 				h.clear
 				add_set_cookie *ck
@@ -142,16 +142,16 @@ module EventMachine
 		#
 		def fixup_headers
 			if @content
-				@headers ["Content-length"] = @content.to_s.length
+				@headers["Content-length"] = @content.to_s.length
 			elsif @chunks
-				@headers ["Transfer-encoding"] = "chunked"
+				@headers["Transfer-encoding"] = "chunked"
 				# Might be nice to ENSURE there is no content-length header,
 				# but how to detect all the possible permutations of upper/lower case?
 			elsif @multiparts
 				@multipart_boundary = self.class.concoct_multipart_boundary
-				@headers ["Content-type"] = "multipart/x-mixed-replace; boundary=\"#{@multipart_boundary}\""
+				@headers["Content-type"] = "multipart/x-mixed-replace; boundary=\"#{@multipart_boundary}\""
 			else
-				@headers ["Content-length"] = 0
+				@headers["Content-length"] = 0
 			end
 		end
 
