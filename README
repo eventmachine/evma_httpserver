@@ -19,7 +19,12 @@
 
      def post_init
        super
-       no_environment_strings
+
+       # faster if you don't need evironment variables (CGI methods)
+       self.no_environment_strings
+
+       # max length of the POST content
+       self.max_content_length = 10_000_000
      end
 
     def process_http_request

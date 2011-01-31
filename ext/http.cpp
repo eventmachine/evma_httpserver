@@ -75,6 +75,10 @@ HttpConnection_t::HttpConnection_t()
 	// instead of buffering it here. To get the latter behavior, user code must call
 	// dont_accumulate_post.
 	bAccumulatePost = true;
+
+	// By default this limit is initialized to 20 MiB, it could be changed at runtime
+	// by the user if needed
+	ContentLengthLimit = MaxContentLength;
 }
 
 
@@ -138,6 +142,20 @@ HttpConnection_t::ReceivePostData
 void HttpConnection_t::ReceivePostData (const char *data, int len)
 {
 	cerr << "UNIMPLEMENTED ReceivePostData" << endl;
+}
+
+/*********************************
+HttpConnection_t::Get/SetMaxContentLength
+*********************************/
+
+int HttpConnection_t::GetMaxContentLength ()
+{
+	return ContentLengthLimit;
+}
+
+void HttpConnection_t::SetMaxContentLength (int len)
+{
+	ContentLengthLimit = len;
 }
 
 /*****************************
@@ -254,7 +272,7 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			}
 			else {
 				const char *nl = strpbrk (data, "\r\n");
-				int len = nl ? (nl - data) : length;
+				int len = nl ? (int)(nl - data) : length;
 				if ((size_t)(HeaderLinePos + len) >= sizeof(HeaderLine)) {
 					// TODO, log this
 					goto fail_connection;
@@ -358,7 +376,7 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 		if (bContentLengthSeen) {
 			// TODO, log this. There are some attacks that depend
 			// on sending more than one content-length header.
-			_SendError (406);
+			_SendError (400, "Bad Request");
 			return false;
 		}
 		bContentLengthSeen = true;
@@ -366,9 +384,9 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 		while (*s && ((*s==' ') || (*s=='\t')))
 			s++;
 		ContentLength = atoi (s);
-		if (ContentLength > MaxContentLength) {
+		if (ContentLength > ContentLengthLimit) {
 			// TODO, log this.
-			_SendError (406);
+			_SendError (413, "Request Entity Too Large");
 			return false;
 		}
 	}
@@ -400,7 +418,7 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 
 	// Copy the incoming header into a block
 	if ((HeaderBlockPos + strlen(header) + 1) < HeaderBlockSize) {
-		int len = strlen(header);
+		int len = (int)strlen(header);
 		memcpy (HeaderBlock+HeaderBlockPos, header, len);
 		HeaderBlockPos += len;
 		HeaderBlock [HeaderBlockPos++] = 0;
@@ -439,26 +457,27 @@ bool HttpConnection_t::_InterpretRequest (const char *header)
 
 	const char *blank = strchr (header, ' ');
 	if (!blank) {
-		_SendError (406);
+		_SendError (400, "Bad Request");
 		return false;
 	}
 
-	if (!_DetectVerbAndSetEnvString (header, blank - header))
+	if (!_DetectVerbAndSetEnvString (header, (int)(blank - header)))
 		return false;
 
 	blank++;
 	if (*blank != '/') {
-		_SendError (406);
+		_SendError (400, "Bad Request");
 		return false;
 	}
 
 	const char *blank2 = strchr (blank, ' ');
 	if (!blank2) {
-		_SendError (406);
+		_SendError (400, "Bad Request");
 		return false;
 	}
+
 	if (strcasecmp (blank2 + 1, "HTTP/1.0") && strcasecmp (blank2 + 1, "HTTP/1.1")) {
-		_SendError (505);
+		_SendError (505, "HTTP Version Not Supported");
 		return false;
 	}
 
@@ -574,12 +593,17 @@ HttpConnection_t::_SendError
 
 void HttpConnection_t::_SendError (int code)
 {
+    _SendError(code, "...");
+}
+
+void HttpConnection_t::_SendError (int code, const char *desc)
+{
 	stringstream ss;
-	ss << "HTTP/1.1 " << code << " ...\r\n";
+	ss << "HTTP/1.1 " << code << " " << desc << "\r\n";
 	ss << "Connection: close\r\n";
 	ss << "Content-type: text/plain\r\n";
 	ss << "\r\n";
 	ss << "Detected error: HTTP code " << code;
 
-	SendData (ss.str().c_str(), ss.str().length());
+	SendData (ss.str().c_str(), (int)ss.str().length());
 }

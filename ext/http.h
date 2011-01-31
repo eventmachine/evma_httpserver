@@ -58,6 +58,8 @@ class HttpConnection_t
 		virtual void ReceivePostData(const char *data, int len);
 		virtual void SetNoEnvironmentStrings() {bSetEnvironmentStrings = false;}
 		virtual void SetDontAccumulatePost() {bAccumulatePost = false;}
+		virtual int GetMaxContentLength();
+		virtual void SetMaxContentLength(int len);
 
   private:
 
@@ -85,6 +87,7 @@ class HttpConnection_t
 		int HeaderBlockPos;
 
 		int ContentLength;
+		int ContentLengthLimit;
 		int ContentPos;
 		char *_Content;
 
@@ -107,6 +110,7 @@ class HttpConnection_t
 		bool _InterpretRequest (const char*);
 		bool _DetectVerbAndSetEnvString (const char*, int);
 		void _SendError (int);
+		void _SendError (int, const char*);
 };
 
 #endif // __HttpPersonality__H_

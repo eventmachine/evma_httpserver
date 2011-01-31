@@ -258,6 +258,33 @@ static VALUE t_dont_accumulate_post (VALUE self)
 	return Qnil;
 }
 
+/**********************
+t_get_max_content_length
+**********************/
+
+static VALUE t_get_max_content_length (VALUE self)
+{
+	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, Intern_http_conn)));
+	if (hc)
+		return INT2FIX (hc->GetMaxContentLength());
+		
+	return Qnil;
+}
+
+/**********************
+t_set_max_content_length
+**********************/
+
+static VALUE t_set_max_content_length (VALUE self, VALUE data)
+{
+	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, Intern_http_conn)));
+	if (hc) {
+		hc->SetMaxContentLength(FIX2INT(data));
+		return INT2FIX (hc->GetMaxContentLength());
+    }
+    
+	return Qnil;
+}
 
 /****************************
 Init_eventmachine_httpserver
@@ -276,4 +303,6 @@ extern "C" void Init_eventmachine_httpserver()
 	rb_define_method (HttpServer, "process_http_request", (VALUE(*)(...))t_process_http_request, 0);
 	rb_define_method (HttpServer, "no_environment_strings", (VALUE(*)(...))t_no_environment_strings, 0);
 	rb_define_method (HttpServer, "dont_accumulate_post", (VALUE(*)(...))t_dont_accumulate_post, 0);
+	rb_define_method (HttpServer, "max_content_length", (VALUE(*)(...))t_get_max_content_length, 0);
+    rb_define_method (HttpServer, "max_content_length=", (VALUE(*)(...))t_set_max_content_length, 1);
 }
