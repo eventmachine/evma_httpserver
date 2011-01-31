@@ -70,6 +70,19 @@ class TestHttpResponse < Test::Unit::TestCase
     assert_equal( true, a.closed_after_writing )
   end
 
+  def test_send_response_with_status
+    a = EventMachine::HttpResponse.new
+    a.status = 200
+    a.status_string = "OK-TEST"
+    a.send_response
+    assert_equal([
+           "HTTP/1.1 200 OK-TEST\r\n",
+           "Content-length: 0\r\n",
+           "\r\n"
+    ].join, a.output_data)
+    assert_equal( true, a.closed_after_writing )
+  end
+
   def test_send_response_1
     a = EventMachine::HttpResponse.new
     a.status = 200
