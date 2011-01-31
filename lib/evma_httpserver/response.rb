@@ -286,6 +286,7 @@ module EventMachine
 		
 		def send_redirect location
 			@status = 302 # TODO, make 301 available by parameter
+      @status_string = "Moved Temporarily"
 			@headers["Location"] = location
 			send_response
 		end
