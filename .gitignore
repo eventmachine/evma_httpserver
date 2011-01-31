@@ -5,3 +5,4 @@ ext/*.o
 ext/*.dll
 ext/*.bundle
 ext/*.so
+.idea

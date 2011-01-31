@@ -49,7 +49,7 @@ module EventMachine
 	# EventMachine::Connection.
 	#
 	class HttpResponse
-		attr_accessor :status, :content, :headers, :chunks, :multiparts
+		attr_accessor :status, :status_string, :content, :headers, :chunks, :multiparts
 
 		def initialize
 			@headers = {}
@@ -111,7 +111,7 @@ module EventMachine
 			fixup_headers
 
 			ary = []
-			ary << "HTTP/1.1 #{@status || 200} ...\r\n"
+			ary << "HTTP/1.1 #{@status || 200} #{@status_string || '...'}\r\n"
 			ary += generate_header_lines(@headers)
 			ary << "\r\n"
 
