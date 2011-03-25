@@ -103,6 +103,57 @@ class TestHttpResponse < Test::Unit::TestCase
     assert( ! a.closed_after_writing )
   end
 
+  def test_send_response_no_close_with_a_404_response
+    a = EventMachine::HttpResponse.new
+    a.status = 404
+    a.content_type "text/plain"
+    a.content = "ABC"
+    a.keep_connection_open
+    a.send_response
+    assert_equal([
+           "HTTP/1.1 404 ...\r\n",
+           "Content-length: 3\r\n",
+           "Content-type: text/plain\r\n",
+           "\r\n",
+           "ABC"
+    ].join, a.output_data)
+    assert( ! a.closed_after_writing )
+  end
+
+  def test_send_response_no_close_with_a_201_response
+    a = EventMachine::HttpResponse.new
+    a.status = 201
+    a.content_type "text/plain"
+    a.content = "ABC"
+    a.keep_connection_open
+    a.send_response
+    assert_equal([
+           "HTTP/1.1 201 ...\r\n",
+           "Content-length: 3\r\n",
+           "Content-type: text/plain\r\n",
+           "\r\n",
+           "ABC"
+    ].join, a.output_data)
+    assert( ! a.closed_after_writing )
+  end
+
+  def test_send_response_no_close_with_a_500_response
+    a = EventMachine::HttpResponse.new
+    a.status = 500
+    a.content_type "text/plain"
+    a.content = "ABC"
+    a.keep_connection_open
+    a.send_response
+    assert_equal([
+           "HTTP/1.1 500 ...\r\n",
+           "Content-length: 3\r\n",
+           "Content-type: text/plain\r\n",
+           "\r\n",
+           "ABC"
+    ].join, a.output_data)
+    assert( a.closed_after_writing )
+  end
+
   def test_send_response_multiple_times
     a = EventMachine::HttpResponse.new
     a.status = 200
