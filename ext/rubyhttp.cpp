@@ -290,7 +290,7 @@ t_get_max_content_length
 
 static VALUE t_get_max_content_length (VALUE self)
 {
-	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, Intern_http_conn)));
+	RubyHttpConnection_t *hc = t_get_http_connection (self);
 	if (hc)
 		return INT2FIX (hc->GetMaxContentLength());
 		
@@ -303,7 +303,7 @@ t_set_max_content_length
 
 static VALUE t_set_max_content_length (VALUE self, VALUE data)
 {
-	RubyHttpConnection_t *hc = (RubyHttpConnection_t*)(NUM2LONG (rb_ivar_get (self, Intern_http_conn)));
+	RubyHttpConnection_t *hc = t_get_http_connection (self);
 	if (hc) {
 		hc->SetMaxContentLength(FIX2INT(data));
 		return INT2FIX (hc->GetMaxContentLength());
