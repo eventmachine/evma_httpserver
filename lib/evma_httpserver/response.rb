@@ -98,7 +98,7 @@ module EventMachine
 			send_headers
 			send_body
 			send_trailer
-			close_connection_after_writing unless (@keep_connection_open and (@status || 200) == 200)
+			close_connection_after_writing unless (@keep_connection_open and (@status || 200) < 500)
 		end
 
 		# Send the headers out in alpha-sorted order. This will degrade performance to some
