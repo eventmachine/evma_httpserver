@@ -49,7 +49,7 @@ module EventMachine
 	# EventMachine::Connection.
 	#
 	class HttpResponse
-		attr_accessor :status, :content, :headers, :chunks, :multiparts
+		attr_accessor :status, :status_string, :content, :headers, :chunks, :multiparts
 
 		def initialize
 			@headers = {}
@@ -98,7 +98,7 @@ module EventMachine
 			send_headers
 			send_body
 			send_trailer
-			close_connection_after_writing unless (@keep_connection_open and (@status || 200) == 200)
+			close_connection_after_writing unless (@keep_connection_open and (@status || 200) < 500)
 		end
 
 		# Send the headers out in alpha-sorted order. This will degrade performance to some
@@ -111,7 +111,7 @@ module EventMachine
 			fixup_headers
 
 			ary = []
-			ary << "HTTP/1.1 #{@status || 200} ...\r\n"
+			ary << "HTTP/1.1 #{@status || 200} #{@status_string || '...'}\r\n"
 			ary += generate_header_lines(@headers)
 			ary << "\r\n"
 
@@ -286,6 +286,7 @@ module EventMachine
 		
 		def send_redirect location
 			@status = 302 # TODO, make 301 available by parameter
+      @status_string = "Moved Temporarily"
 			@headers["Location"] = location
 			send_response
 		end

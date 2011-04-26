@@ -20,7 +20,8 @@ namespace :build do
   end
   CLEAN.include('ext/Makefile')
   CLEAN.include('ext/*.log')
-  
+  CLEAN.include('ext/*.o')
+
   libfile = "ext/eventmachine_httpserver.#{Config::CONFIG['DLEXT']}"
   file libfile => ['ext/Makefile', *sources] do
     Dir.chdir 'ext' do
