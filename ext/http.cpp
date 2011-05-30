@@ -465,6 +465,16 @@ bool HttpConnection_t::_InterpretRequest (const char *header)
 		return false;
 
 	blank++;
+  // according to http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1
+  // HTTP 1.1 complient servers MUST also accept absolute URIs in the request line
+  // e.g. GET http://foo/bar
+  if (strncasecmp (blank, "http://", 7) == 0) {
+    blank += 7; // skip over scheme part
+    while (*blank && *blank != '/') { // skip to next slash
+      blank++;
+    }
+  }
+
 	if (*blank != '/') {
 		_SendError (400, "Bad Request");
 		return false;
