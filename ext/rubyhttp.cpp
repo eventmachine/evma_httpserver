@@ -256,7 +256,7 @@ t_process_http_request
 static VALUE t_process_http_request (VALUE self)
 {
 	// This is a stub in case the caller doesn't define it.
-	rb_funcall (self, rb_intern ("send_data"), 1, rb_str_new2 ("HTTP/1.1 200 ...\r\nContent-type: text/plain\r\nContent-length: 8\r\n\r\nMonorail"));
+	rb_funcall (self, rb_intern ("send_data"), 1, rb_str_new2 ("HTTP/1.1 200 OK\r\nContent-type: text/plain\r\nContent-length: 8\r\n\r\nMonorail"));
 	return Qnil;
 }
 

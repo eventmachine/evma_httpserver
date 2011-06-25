@@ -26,7 +26,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef __HttpPersonality__H_
 #define __HttpPersonality__H_
 
-
+#define RESPONSE_CODE_405  "405 Method Not Allowed"
+#define RESPONSE_CODE_406  "406 Not Acceptable"
+#define RESPONSE_CODE_505  "505 HTTP Version Not Supported"
 
 /**********************
 class HttpConnection_t
@@ -106,7 +108,7 @@ class HttpConnection_t
 		bool _InterpretHeaderLine (const char*);
 		bool _InterpretRequest (const char*);
 		bool _DetectVerbAndSetEnvString (const char*, int);
-		void _SendError (int);
+		void _SendError (const char*);
 };
 
 #endif // __HttpPersonality__H_
