@@ -1,6 +1,6 @@
 # $Id: Rakefile 3546 2006-12-31 21:01:27Z francis $
 
-require 'rake/gempackagetask'
+require 'rubygems/package_task'
 require 'rake/clean'
 require 'rake/testtask'
 
@@ -21,7 +21,7 @@ namespace :build do
   CLEAN.include('ext/Makefile')
   CLEAN.include('ext/*.log')
   
-  libfile = "ext/eventmachine_httpserver.#{Config::CONFIG['DLEXT']}"
+  libfile = "ext/eventmachine_httpserver.#{RbConfig::CONFIG['DLEXT']}"
   file libfile => ['ext/Makefile', *sources] do
     Dir.chdir 'ext' do
       make = case RUBY_PLATFORM
