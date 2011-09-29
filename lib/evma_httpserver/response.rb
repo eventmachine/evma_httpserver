@@ -49,16 +49,18 @@ module EventMachine
 	# EventMachine::Connection.
 	#
 	class HttpResponse
-		attr_reader :content
 		attr_accessor :status, :headers, :chunks, :multiparts
 
 		def initialize
 			@headers = {}
-			@content = ''
 		end
 
 		def content= (value)
 			@content = value.to_s
+		end
+
+		def content
+			@content || ''
 		end
 
 		def keep_connection_open arg=true
