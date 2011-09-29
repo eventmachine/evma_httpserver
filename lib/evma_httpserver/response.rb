@@ -55,13 +55,9 @@ module EventMachine
 			@headers = {}
 		end
 
-		def content= (value)
-			@content = value.to_s
-		end
-
-		def content
-			@content || ''
-		end
+		def content= (value); @content = value.to_s; end
+		def content;          @content || '';        end
+		def content?;         !!@content;            end
 
 		def keep_connection_open arg=true
 			@keep_connection_open = arg
@@ -200,7 +196,7 @@ module EventMachine
 		def send_content
 			raise "sent content already" if @sent_content
 			@sent_content = true
-			send_data(@content)
+			send_data(content)
 		end
 
 		# add a chunk to go to the output.
