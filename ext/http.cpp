@@ -572,7 +572,8 @@ bool HttpConnection_t::_DetectVerbAndSetEnvString (const char *request, int verb
 		"POST",
 		"PUT",
 		"DELETE",
-		"HEAD"
+		"HEAD",
+        "OPTIONS"
 	};
 
 	int n_verbs = sizeof(verbs) / sizeof(const char*);
