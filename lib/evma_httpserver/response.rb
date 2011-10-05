@@ -49,11 +49,15 @@ module EventMachine
 	# EventMachine::Connection.
 	#
 	class HttpResponse
-		attr_accessor :status, :content, :headers, :chunks, :multiparts
+		attr_accessor :status, :headers, :chunks, :multiparts
 
 		def initialize
 			@headers = {}
 		end
+
+		def content= (value); @content = value.to_s; end
+		def content;          @content || '';        end
+		def content?;         !!@content;            end
 
 		def keep_connection_open arg=true
 			@keep_connection_open = arg
@@ -142,7 +146,7 @@ module EventMachine
 		#
 		def fixup_headers
 			if @content
-				@headers["Content-length"] = @content.to_s.length
+				@headers["Content-length"] = @content.bytesize
 			elsif @chunks
 				@headers["Transfer-encoding"] = "chunked"
 				# Might be nice to ENSURE there is no content-length header,
@@ -160,14 +164,11 @@ module EventMachine
 		# DO NOT close the connection or send any goodbye kisses. This method can
 		# be called multiple times to send out chunks or multiparts.
 		def send_body
-			if @content
-				send_content
-			elsif @chunks
+			if @chunks
 				send_chunks
 			elsif @multiparts
 				send_multiparts
 			else
-				@content = ""
 				send_content
 			end
 		end
@@ -178,11 +179,9 @@ module EventMachine
 		#
 		def send_trailer
 			send_headers unless @sent_headers
-			if @content
-				# no-op
-			elsif @chunks
+			if @chunks
 				unless @last_chunk_sent
-					chunk ""
+					chunk ''
 					send_chunks
 				end
 			elsif @multiparts
@@ -191,15 +190,13 @@ module EventMachine
 				# supposed to interact with the case where we leave the connection
 				# open after transmitting the multipart response.
 				send_data "\r\n--#{@multipart_boundary}--\r\n\r\n"
-			else
-				# no-op
 			end
 		end
 
 		def send_content
 			raise "sent content already" if @sent_content
 			@sent_content = true
-			send_data((@content || "").to_s)
+			send_data(content)
 		end
 
 		# add a chunk to go to the output.
