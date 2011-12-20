@@ -65,9 +65,10 @@ class TestDelegatedHttpResponse < Test::Unit::TestCase
 		d = D.new
 		a = EM::DelegatedHttpResponse.new( d )
 		a.status = 200
+		a.status_reason = "OK"
 		a.send_response
 		assert_equal([
-			     "HTTP/1.1 200 ...\r\n",
+			     "HTTP/1.1 200 OK\r\n",
 			     "Content-length: 0\r\n",
 			     "\r\n"
 		].join, d.output_data)
@@ -78,11 +79,12 @@ class TestDelegatedHttpResponse < Test::Unit::TestCase
 		d = D.new
 		a = EM::DelegatedHttpResponse.new( d )
 		a.status = 200
+		a.status_reason = "OK"
 		a.content_type "text/plain"
 		a.content = "ABC"
 		a.send_response
 		assert_equal([
-			     "HTTP/1.1 200 ...\r\n",
+			     "HTTP/1.1 200 OK\r\n",
 			     "Content-length: 3\r\n",
 			     "Content-type: text/plain\r\n",
 			     "\r\n",
@@ -95,12 +97,13 @@ class TestDelegatedHttpResponse < Test::Unit::TestCase
 		d = D.new
 		a = EM::DelegatedHttpResponse.new( d )
 		a.status = 200
+		a.status_reason = "OK"
 		a.content_type "text/plain"
 		a.content = "ABC"
 		a.keep_connection_open
 		a.send_response
 		assert_equal([
-			     "HTTP/1.1 200 ...\r\n",
+			     "HTTP/1.1 200 OK\r\n",
 			     "Content-length: 3\r\n",
 			     "Content-type: text/plain\r\n",
 			     "\r\n",
@@ -122,9 +125,10 @@ class TestDelegatedHttpResponse < Test::Unit::TestCase
 		d = D.new
 		a = EM::DelegatedHttpResponse.new( d )
 		a.status = 200
+		a.status_reason = "OK"
 		a.send_headers
 		assert_equal([
-			     "HTTP/1.1 200 ...\r\n",
+			     "HTTP/1.1 200 OK\r\n",
 			     "Content-length: 0\r\n",
 			     "\r\n"
 		].join, d.output_data)
@@ -143,7 +147,7 @@ class TestDelegatedHttpResponse < Test::Unit::TestCase
 		a.keep_connection_open
 		a.send_response
 		assert_equal([
-			     "HTTP/1.1 200 ...\r\n",
+			     "HTTP/1.1 200 OK\r\n",
 			     "Transfer-encoding: chunked\r\n",
 			     "\r\n",
 			     "3\r\n",
@@ -166,7 +170,7 @@ class TestDelegatedHttpResponse < Test::Unit::TestCase
 		a.chunk "GHI"
 		a.send_response
 		assert_equal([
-			     "HTTP/1.1 200 ...\r\n",
+			     "HTTP/1.1 200 OK\r\n",
 			     "Transfer-encoding: chunked\r\n",
 			     "\r\n",
 			     "3\r\n",
