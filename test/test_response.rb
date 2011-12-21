@@ -42,7 +42,7 @@ class TestHttpResponse < Test::Unit::TestCase
     a = EventMachine::HttpResponse.new
     a.status = 200
     a.content = "Some content"
-    a.headers["Content-type"] = "text/xml"
+    a.headers["Content-Type"] = "text/xml"
   end
 
   def test_header_sugarings
@@ -52,8 +52,8 @@ class TestHttpResponse < Test::Unit::TestCase
     a.headers["X-bayshore"] = "aaaa"
 
     assert_equal({
-      "Content-type" => "text/xml",
-      "Set-cookie" => ["a=b"],
+      "Content-Type" => "text/xml",
+      "Set-Cookie" => ["a=b"],
       "X-bayshore" => "aaaa"
     }, a.headers)
   end
@@ -63,8 +63,8 @@ class TestHttpResponse < Test::Unit::TestCase
     a.status = 200
     a.send_response
     assert_equal([
-           "HTTP/1.1 200 ...\r\n",
-           "Content-length: 0\r\n",
+           "HTTP/1.1 200 OK\r\n",
+           "Content-Length: 0\r\n",
            "\r\n"
     ].join, a.output_data)
     assert_equal( true, a.closed_after_writing )
@@ -77,9 +77,9 @@ class TestHttpResponse < Test::Unit::TestCase
     a.content = "ABC"
     a.send_response
     assert_equal([
-           "HTTP/1.1 200 ...\r\n",
-           "Content-length: 3\r\n",
-           "Content-type: text/plain\r\n",
+           "HTTP/1.1 200 OK\r\n",
+           "Content-Length: 3\r\n",
+           "Content-Type: text/plain\r\n",
            "\r\n",
            "ABC"
     ].join, a.output_data)
@@ -94,9 +94,9 @@ class TestHttpResponse < Test::Unit::TestCase
     a.keep_connection_open
     a.send_response
     assert_equal([
-           "HTTP/1.1 200 ...\r\n",
-           "Content-length: 3\r\n",
-           "Content-type: text/plain\r\n",
+           "HTTP/1.1 200 OK\r\n",
+           "Content-Length: 3\r\n",
+           "Content-Type: text/plain\r\n",
            "\r\n",
            "ABC"
     ].join, a.output_data)
@@ -117,8 +117,8 @@ class TestHttpResponse < Test::Unit::TestCase
     a.status = 200
     a.send_headers
     assert_equal([
-           "HTTP/1.1 200 ...\r\n",
-           "Content-length: 0\r\n",
+           "HTTP/1.1 200 OK\r\n",
+           "Content-Length: 0\r\n",
            "\r\n"
     ].join, a.output_data)
     assert( ! a.closed_after_writing )
@@ -135,8 +135,8 @@ class TestHttpResponse < Test::Unit::TestCase
     a.keep_connection_open
     a.send_response
     assert_equal([
-           "HTTP/1.1 200 ...\r\n",
-           "Transfer-encoding: chunked\r\n",
+           "HTTP/1.1 200 OK\r\n",
+           "Transfer-Encoding: chunked\r\n",
            "\r\n",
            "3\r\n",
            "ABC\r\n",
@@ -157,8 +157,8 @@ class TestHttpResponse < Test::Unit::TestCase
     a.chunk "GHI"
     a.send_response
     assert_equal([
-           "HTTP/1.1 200 ...\r\n",
-           "Transfer-encoding: chunked\r\n",
+           "HTTP/1.1 200 OK\r\n",
+           "Transfer-Encoding: chunked\r\n",
            "\r\n",
            "3\r\n",
            "ABC\r\n",
@@ -173,6 +173,3 @@ class TestHttpResponse < Test::Unit::TestCase
   end
 
 end
-
-
-

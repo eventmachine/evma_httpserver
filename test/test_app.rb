@@ -34,7 +34,7 @@ class TestApp < Test::Unit::TestCase
   TestPort = 8911
 
   TestResponse_1 = <<EORESP
-HTTP/1.0 200 ...
+HTTP/1.0 200 OK
 Content-length: 4
 Content-type: text/plain
 Connection: close
