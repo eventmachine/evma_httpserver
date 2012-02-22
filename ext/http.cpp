@@ -75,6 +75,8 @@ HttpConnection_t::HttpConnection_t()
 	// instead of buffering it here. To get the latter behavior, user code must call
 	// dont_accumulate_post.
 	bAccumulatePost = true;
+  
+  
 }
 
 
@@ -84,8 +86,10 @@ HttpConnection_t::~HttpConnection_t
 
 HttpConnection_t::~HttpConnection_t()
 {
-	if (_Content)
+	if (_Content) {
 		free (_Content);
+    _Content = NULL;
+  }
 }
 
 
@@ -125,7 +129,8 @@ void HttpConnection_t::ProcessRequest (const char *method,
 		int post_length,
 		const char *post_content,
 		const char *hdrblock,
-		int hdrblocksize)
+		int hdrblocksize,
+    int content_chunked)
 {
   cerr << "UNIMPLEMENTED ProcessRequest" << endl;
 }
@@ -146,6 +151,7 @@ HttpConnection_t::ConsumeData
 
 void HttpConnection_t::ConsumeData (const char *data, int length)
 {
+
 	if (ProtocolState == EndState)
 		return;
 
@@ -153,6 +159,7 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 		throw std::runtime_error ("bad args consuming http data");
 
 	while (length > 0) {
+  
 		//----------------------------------- BaseState
 		// Initialize for a new request. Don't consume any data.
 		// For anal-retentive security we may want to bzero the header block.
@@ -162,7 +169,10 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			HeaderLinePos = 0;
 			HeaderBlockPos = 0;
 			ContentLength = 0;
+      ContentChunked = 0;
+      TrailerProcessing = 0;
 			ContentPos = 0;
+      Chunk_req_received = 0;
 			bRequestSeen = false;
 			bContentLengthSeen = false;
 			if (_Content) {
@@ -214,6 +224,8 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			}
 			else
 				ProtocolState = HeaderState;
+       
+     //  sleep(30);
 		}
 
 		//----------------------------------- HeaderState
@@ -240,9 +252,25 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 						ContentPos = 0;
 						ProtocolState = ReadingContentState;
 					}
-					else
+          else if (ContentChunked){
+              if (_Content){
+                free (_Content);
+              }
+              _Content = NULL;
+              ContentPos = 0;
+              ProtocolState = ReadingChunkedContent;
+              ContentChunked = 0;
+          }          
+					else{
+            if(TrailerProcessing){
+              ContentLength = ContentPos;
+              Chunk_req_received = 1;
+            }
+            // We will come to here for GET or Chunked POST.
 						ProtocolState = DispatchState;
+          }
 				}
+
 				HeaderLinePos = 0;
 				data++;
 				length--;
@@ -255,10 +283,12 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			else {
 				const char *nl = strpbrk (data, "\r\n");
 				int len = nl ? (nl - data) : length;
+        
 				if ((size_t)(HeaderLinePos + len) >= sizeof(HeaderLine)) {
 					// TODO, log this
 					goto fail_connection;
 				}
+        
 				memcpy (HeaderLine + HeaderLinePos, data, len);
 				data += len;
 				length -= len;
@@ -271,9 +301,9 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 		// Read POST content.
 		while ((ProtocolState == ReadingContentState) && (length > 0)) {
 			int len = ContentLength - ContentPos;
-			if (len > length)
+			if (len > length){
 				len = length;
-
+      }
 			if (bAccumulatePost)
 				memcpy (_Content + ContentPos, data, len);
 			else
@@ -283,16 +313,64 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			length -= len;
 			ContentPos += len;
 			if (ContentPos == ContentLength) {
-				if (bAccumulatePost)
+				if (bAccumulatePost){
 					_Content[ContentPos] = 0;
-				ProtocolState = DispatchState;
+				}
+        ProtocolState = DispatchState;
 			}
 		}
-
+		//----------------------------------- ReadingChunkedContent
+		// Read POST chunked content.
+		while ((ProtocolState == ReadingChunkedContent && length > 0)) {
+      char *_temp_content = NULL;
+      int chunkbytelen = 0;
+      int chunklen = _GetChunkLength(data,&length,&chunkbytelen); //Need pass length address so can modify the same copy. 
+      data += chunkbytelen;
+      length -= chunkbytelen;
+      while(chunklen > 0)
+      {
+        //copy to temp variable so we don't overwrite _Content with null if we can't alloc.
+        _temp_content = (char*) realloc(_Content, ContentPos + chunklen + 1);
+        
+        if (!_temp_content){
+          // free(_Content);
+          // _Content = NULL;
+          throw std::runtime_error ("resource exhaustion");
+        }
+        _Content = _temp_content;
+        
+        memcpy(_Content + ContentPos, data, chunklen);
+        ContentPos += chunklen;
+        _Content[ContentPos] = '\0';
+        data += chunklen + 2;
+        length -= chunklen + 2;
+        
+        //Get next chunk length
+        chunklen = _GetChunkLength(data,&length,&chunkbytelen);
+        data += chunkbytelen;
+        length -= chunkbytelen;
+      }
+      //Process the next trailer header lines. 
+      ProtocolState = HeaderState;
+ 
+    }
 
 		//----------------------------------- DispatchState
 		if (ProtocolState == DispatchState) {
-			ProcessRequest (RequestMethod, Cookie.c_str(), IfNoneMatch.c_str(), ContentType.c_str(), QueryString.c_str(), PathInfo.c_str(), RequestUri.c_str(), Protocol.c_str(), ContentLength, _Content, HeaderBlock, HeaderBlockPos);
+			ProcessRequest (RequestMethod, 
+                      Cookie.c_str(), 
+                      IfNoneMatch.c_str(), 
+                      ContentType.c_str(), 
+                      QueryString.c_str(), 
+                      PathInfo.c_str(), 
+                      RequestUri.c_str(), 
+                      Protocol.c_str(), 
+                      ContentLength, 
+                      _Content, 
+                      HeaderBlock, 
+                      HeaderBlockPos, 
+                      Chunk_req_received);
+                      
 			ProtocolState = BaseState;
 		}
 	}
@@ -317,7 +395,6 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 /**************************************
 HttpConnection_t::_InterpretHeaderLine
 **************************************/
-
 bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 {
 	/* Return T/F to indicate whether we should continue processing
@@ -389,6 +466,12 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 			setenv ("IF_NONE_MATCH", s, true);
 	}
 	else if (!strncasecmp (header, "Content-type:", 13)) {
+    //If we receive this header after we have processed chunked data
+    //send an error.
+    if(TrailerProcessing){
+      _SendError (RESPONSE_CODE_406);
+      return false;
+    }
 		const char *s = header + 13;
 		while (*s && ((*s==' ') || (*s=='\t')))
 			s++;
@@ -396,8 +479,26 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 		if (bSetEnvironmentStrings)
 			setenv ("CONTENT_TYPE", s, true);
 	}
-
-
+	else if (!strncasecmp (header, "Transfer-Encoding:", 18)) {
+    if(TrailerProcessing){
+      _SendError (RESPONSE_CODE_406);
+      return false;
+    }
+		const char *s = header + 18;
+		while (*s && ((*s==' ') || (*s=='\t')))
+			s++;
+		if (!strncasecmp (s, "chunked", 7)){
+      TrailerProcessing = 1;
+      ContentChunked = 1;
+    }
+    
+	}
+  else if (!strncasecmp (header, "Trailer:", 8)) {
+    if(TrailerProcessing){
+      _SendError (RESPONSE_CODE_406);
+      return false;
+    }
+  }
 	// Copy the incoming header into a block
 	if ((HeaderBlockPos + strlen(header) + 1) < HeaderBlockSize) {
 		int len = strlen(header);
@@ -581,4 +682,59 @@ void HttpConnection_t::_SendError (const char *header)
 	ss << "\r\n";
 
 	SendData (ss.str().c_str(), ss.str().length());
+}
+
+/****************************
+HttpConnection_t::_GetChunkLength
+****************************/
+
+int HttpConnection_t::_GetChunkLength (const char *data, int *length_p, int *chunkbytelen)
+{
+  char  chunklen_s[10] = {0};
+
+  const char *nl;
+  int len;
+  
+
+  //The standards say that there can be a semi-colon after the chunk length, plus some data;
+  const char * pch = strpbrk (data,";");
+  
+  //if there is a semicolon then we have to extract the bytes upto that colon
+  //After that we get the position to the end of the line. 
+  if (pch != NULL){
+    len = pch ? (pch - data) : *length_p;
+    //copy the byte stream length into chunklen_s
+    memcpy (chunklen_s, data, len);
+    chunklen_s[len] = '\0';
+    nl = strpbrk (data, "\r\n");
+    len = nl ? (nl - data) : *length_p;
+
+    //now we move the data pointed to the end of the line.
+    if (len > *length_p){
+      len = *length_p;
+    }
+    
+  }
+  //if there is no semi colon then we have extract the bytes up to the end of the line and
+  //assume those bytes are the chunk length.
+  else{
+    nl = strpbrk (data, "\r\n");
+    len = nl ? (nl - data) : *length_p;
+    //now we move the data pointed to the end of the line.
+    if (len > *length_p){
+      len = *length_p;
+    }
+    memcpy (chunklen_s, data, len);
+    chunklen_s[len] = '\0';
+  }
+  
+   // Passing the length back to the calling function. Did try to modify data and length variables
+   // in this function but for some reason the code completely skipped the line data +=len line...weird.
+   
+   //the +2 is for the \r\n characters.
+   *chunkbytelen = len+2; 
+
+  
+  //convert the length to a long and return.
+  return (int)strtol ( chunklen_s, NULL, 16 );
 }

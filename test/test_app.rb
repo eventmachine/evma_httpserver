@@ -158,10 +158,10 @@ EORESP
         # a costly operation, but we should provide an optional method that
         # does the parsing so it doesn't need to be done by users.
         conn.instance_eval do
-          @assertions = proc do
+          @assertions = proc {
             received_header_string = @http_headers
             received_header_ary = @http_headers.split(/\0/).map {|line| line.split(/:\s*/, 2) }
-          end
+          }
         end
       end
 
@@ -198,7 +198,8 @@ EORESP
     content_type = "text/plain"
     received_post_content = ""
     received_content_type = ""
-
+    received_chunk=""
+    
     EventMachine.run do
       EventMachine.start_server(TestHost, TestPort, MyTestServer) do |conn|
         # In each accepted connection, set up a procedure that will copy
@@ -209,6 +210,7 @@ EORESP
           @assertions = proc do
             received_post_content = @http_post_content
             received_content_type = ENV["CONTENT_TYPE"]
+            received_chunk = @http_chunked
           end
         end
       end
@@ -232,8 +234,198 @@ EORESP
       EventMachine.defer cb, eb
     end
 
-    assert_equal( received_post_content, post_content )
+    assert_equal( post_content, received_post_content)
     assert_equal( received_content_type, content_type )
+    assert_equal( false,received_chunk )
+  end
+  
+  def test_chunked
+    received_header_string = nil
+    chunked_content1 = "1234567890"
+    chunked_content2 = "abcdefgh"
+    chunked_content3 = "This will be a lot longer than the previous two chunks."
+    content_type = "text/plain"
+    etag = "12345"
+    received_post_content = ""
+    received_content_type = ""
+    
+    request_parms = {}
+
+    EventMachine.run do
+      EventMachine.start_server(TestHost, TestPort, MyTestServer) do |conn|
+        # In each accepted connection, set up a procedure that will copy
+        # the request parameters into a local variable visible here, so
+        # we can assert the values later.
+        # The @http_post_content variable is set automatically.
+        conn.instance_eval do
+          @assertions = proc do
+            parms = %w( PATH_INFO QUERY_STRING HTTP_COOKIE IF_NONE_MATCH
+            CONTENT_TYPE REQUEST_METHOD REQUEST_URI )
+            parms.each {|parm|
+              # request_parms is bound to a local variable visible in this context.
+              request_parms[parm] = ENV[parm]
+            }
+            received_post_content = @http_post_content
+            
+            received_content_type = ENV["CONTENT_TYPE"]
+          end
+        end
+      end
+      EventMachine.add_timer(1) {raise "timed out"} # make sure the test completes
+
+      cb = proc do
+        tcp = TCPSocket.new TestHost, TestPort
+        data = [
+          "POST / HTTP/1.1\r\n",
+          "Content-type: #{content_type}\r\n",
+          "Transfer-Encoding: chunked\r\n",
+          "\r\n",
+          "#{chunked_content1.length.to_s(16)};somedata\r\n",
+          "#{chunked_content1}\r\n",
+          "#{chunked_content2.length.to_s(16)}\r\n",
+          "#{chunked_content2}\r\n",
+          "#{chunked_content3.length.to_s(16)}\r\n",
+          "#{chunked_content3}\r\n",
+          "0\r\n",
+          "SOAPaction: \r\n",
+          "If-none-match: #{etag}\r\n",
+          "\r\n"
+        ].join
+        tcp.write(data)
+        received_response = tcp.read
+      end
+      eb = proc do
+        EventMachine.stop
+      end
+      EventMachine.defer cb, eb
+    end
+
+    assert_equal( chunked_content1+chunked_content2+chunked_content3, received_post_content)
+    assert_equal( received_content_type, content_type )
+    assert_equal( etag, request_parms["IF_NONE_MATCH"] )
+  
   end
 
+
+  def test_chunked_soap
+    received_header_string = nil
+    chunked_content1 = "<?xml version='1.0' encoding='UTF-8'?><soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><ns1:searchRequest xmlns:ns1=\"urn:siemens:names:prov:gw:SPML:2:0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"ns1:SearchRequest\" newGenerated=\"true\"><version>SUBSCRIBER_v10</version><base><objectclass>Subscriber</objectclass><alias name=\"msisdn\" value=\"14257707594\" /></base><returnAttribute>identifier</returnAttribute></ns1:searchRequest></soapenv:Body></soapenv:Envelope>"
+    content_type = "text/plain; charset=UTF-8"
+    received_chunk=""
+    received_post_content = ""
+    received_content_type = ""
+    
+    request_parms = {}
+
+    EventMachine.run do
+      EventMachine.start_server(TestHost, TestPort, MyTestServer) do |conn|
+        # In each accepted connection, set up a procedure that will copy
+        # the request parameters into a local variable visible here, so
+        # we can assert the values later.
+        # The @http_post_content variable is set automatically.
+        conn.instance_eval do
+          @assertions = proc do
+            parms = %w( PATH_INFO QUERY_STRING HTTP_COOKIE IF_NONE_MATCH
+            CONTENT_TYPE REQUEST_METHOD REQUEST_URI )
+            parms.each {|parm|
+              # request_parms is bound to a local variable visible in this context.
+              request_parms[parm] = ENV[parm]
+            }
+            received_post_content = @http_post_content
+            received_chunk = @http_chunked
+            received_content_type = ENV["CONTENT_TYPE"]
+          end
+        end
+      end
+      EventMachine.add_timer(1) {raise "timed out"} # make sure the test completes
+
+      cb = proc do
+        tcp = TCPSocket.new TestHost, TestPort
+        data = [
+          "POST / HTTP/1.1\r\n",
+          "User-Agent: Axis2\r\n",
+          "SOAPAction: \"urn:siemens:names:prov:gw:SPML:2:0/searchRequest\"\r\n",
+          "Content-type: #{content_type}\r\n",
+          "Transfer-Encoding: chunked\r\n",
+          "\r\n",
+          "#{chunked_content1.length.to_s(16)}\r\n",
+          "#{chunked_content1}\r\n",
+          "0\r\n",
+          "\r\n"
+        ].join
+        tcp.write(data)
+        received_response = tcp.read
+      end
+      eb = proc do
+        EventMachine.stop
+      end
+      EventMachine.defer cb, eb
+    end
+
+    assert_equal( chunked_content1, received_post_content)
+    assert_equal( true,received_chunk )
+    assert_equal( received_content_type, content_type )
+  
+  end
+ 
+  def test_chunked_single
+    received_header_string = nil
+    chunked_content1 = "1234567890"
+    content_type = "text/plain"
+    etag = "12345"
+    received_post_content = ""
+    received_content_type = ""
+    
+    request_parms = {}
+
+    EventMachine.run do
+      EventMachine.start_server(TestHost, TestPort, MyTestServer) do |conn|
+        # In each accepted connection, set up a procedure that will copy
+        # the request parameters into a local variable visible here, so
+        # we can assert the values later.
+        # The @http_post_content variable is set automatically.
+        conn.instance_eval do
+          @assertions = proc do
+            parms = %w( PATH_INFO QUERY_STRING HTTP_COOKIE IF_NONE_MATCH
+            CONTENT_TYPE REQUEST_METHOD REQUEST_URI )
+            parms.each {|parm|
+              # request_parms is bound to a local variable visible in this context.
+              request_parms[parm] = ENV[parm]
+            }
+            received_post_content = @http_post_content
+
+            received_content_type = ENV["CONTENT_TYPE"]
+          end
+        end
+      end
+      EventMachine.add_timer(1) {raise "timed out"} # make sure the test completes
+
+      cb = proc do
+        tcp = TCPSocket.new TestHost, TestPort
+        data = [
+          "POST / HTTP/1.1\r\n",
+          "Content-type: #{content_type}\r\n",
+          "Transfer-Encoding: chunked\r\n",
+          "\r\n",
+          "#{chunked_content1.length.to_s(16)};somedata\r\n",
+          "#{chunked_content1}\r\n",
+          "0\r\n",
+          "SOAPaction: \r\n",
+          "If-none-match: #{etag}\r\n",
+          "\r\n"
+        ].join
+        tcp.write(data)
+        received_response = tcp.read
+      end
+      eb = proc do
+        EventMachine.stop
+      end
+      EventMachine.defer cb, eb
+    end
+
+    assert_equal( chunked_content1, received_post_content)
+    assert_equal( received_content_type, content_type )
+    assert_equal( etag, request_parms["IF_NONE_MATCH"] )
+  
+  end
 end

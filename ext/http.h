@@ -55,7 +55,8 @@ class HttpConnection_t
 				int postlength,
 				const char *postdata,
 				const char* hdrblock,
-				int hdrblksize);
+				int hdrblksize,
+        int content_chunked);
 
 		virtual void ReceivePostData(const char *data, int len);
 		virtual void SetNoEnvironmentStrings() {bSetEnvironmentStrings = false;}
@@ -68,6 +69,7 @@ class HttpConnection_t
 			PreheaderState,
 			HeaderState,
 			ReadingContentState,
+      ReadingChunkedContent,
 			DispatchState,
 			EndState
 		} ProtocolState;
@@ -87,8 +89,11 @@ class HttpConnection_t
 		int HeaderBlockPos;
 
 		int ContentLength;
+    int ContentChunked;
+    int TrailerProcessing;
 		int ContentPos;
 		char *_Content;
+    int Chunk_req_received;
 
 		bool bSetEnvironmentStrings;
 		bool bAccumulatePost;
@@ -105,6 +110,7 @@ class HttpConnection_t
 		std::string Protocol;
 
 	private:
+    int _GetChunkLength(const char *, int *, int *);
 		bool _InterpretHeaderLine (const char*);
 		bool _InterpretRequest (const char*);
 		bool _DetectVerbAndSetEnvString (const char*, int);
