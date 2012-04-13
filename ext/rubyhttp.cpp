@@ -56,7 +56,8 @@ class RubyHttpConnection_t: public HttpConnection_t
 				int postlength,
 				const char *postdata,
 				const char *hdrblock,
-				int hdrblocksize);
+				int hdrblocksize,
+        int content_chunked);
 		virtual void ReceivePostData (const char *data, int len);
 
 	private:
@@ -114,7 +115,8 @@ void RubyHttpConnection_t::ProcessRequest (const char *request_method,
 		int post_length,
 		const char *post_content,
 		const char *hdr_block,
-		int hdr_block_size)
+		int hdr_block_size,
+    int content_chunked)
 {
 	VALUE post = Qnil;
 	VALUE headers = Qnil;
@@ -126,7 +128,8 @@ void RubyHttpConnection_t::ProcessRequest (const char *request_method,
 	VALUE query_string_val = Qnil;
 	VALUE request_uri_val = Qnil;
 	VALUE protocol_val = Qnil;
-
+  VALUE chunked = Qfalse;
+  
 	if ((post_length > 0) && post_content)
 		post = rb_str_new (post_content, post_length);
 
@@ -150,8 +153,10 @@ void RubyHttpConnection_t::ProcessRequest (const char *request_method,
 	if (request_uri && *request_uri)
 		request_uri_val = rb_str_new (request_uri, strlen (request_uri));
 	if (protocol && *protocol)
-		protocol_val = rb_str_new (protocol, strlen (protocol));
-
+		protocol_val = rb_str_new (protocol, strlen (protocol));  
+  if(content_chunked){
+    chunked = Qtrue;
+  }
 	rb_ivar_set (Myself, rb_intern ("@http_request_method"), req_method);
 	rb_ivar_set (Myself, rb_intern ("@http_cookie"), cookie_val);
 	rb_ivar_set (Myself, rb_intern ("@http_if_none_match"), ifnonematch_val);
@@ -162,6 +167,7 @@ void RubyHttpConnection_t::ProcessRequest (const char *request_method,
 	rb_ivar_set (Myself, rb_intern ("@http_post_content"), post);
 	rb_ivar_set (Myself, rb_intern ("@http_headers"), headers);
 	rb_ivar_set (Myself, rb_intern ("@http_protocol"), protocol_val);
+  rb_ivar_set (Myself, rb_intern ("@http_chunked"), chunked);
 	rb_funcall (Myself, rb_intern ("process_http_request"), 0);
 }
 
@@ -222,6 +228,7 @@ t_receive_data
 
 static VALUE t_receive_data (VALUE self, VALUE data)
 {
+
 	int length = NUM2INT (rb_funcall (data, rb_intern ("length"), 0));
 	RubyHttpConnection_t *hc = t_get_http_connection (self);
 	if (hc)
