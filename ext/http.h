@@ -69,6 +69,7 @@ class HttpConnection_t
 			PreheaderState,
 			HeaderState,
 			ReadingContentState,
+      ReadingChunkLen,
       ReadingChunkedContent,
 			DispatchState,
 			EndState
@@ -94,11 +95,18 @@ class HttpConnection_t
 		int ContentPos;
 		char *_Content;
     int Chunk_req_received;
+    
+    char  chunklen_s[10];
+    int foundsemi;
+    int foundslashr;
+    int chunklen;
+    int foundslashn;
 
 		bool bSetEnvironmentStrings;
 		bool bAccumulatePost;
 		bool bRequestSeen;
 		bool bContentLengthSeen;
+//    ofstream programlog;
 
 		const char *RequestMethod;
 		std::string Cookie;

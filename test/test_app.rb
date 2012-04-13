@@ -309,8 +309,8 @@ EORESP
 
   def test_chunked_soap
     received_header_string = nil
-    chunked_content1 = "<?xml version='1.0' encoding='UTF-8'?><soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><ns1:searchRequest xmlns:ns1=\"urn:siemens:names:prov:gw:SPML:2:0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"ns1:SearchRequest\" newGenerated=\"true\"><version>SUBSCRIBER_v10</version><base><objectclass>Subscriber</objectclass><alias name=\"msisdn\" value=\"14257707594\" /></base><returnAttribute>identifier</returnAttribute></ns1:searchRequest></soapenv:Body></soapenv:Envelope>"
-    content_type = "text/plain; charset=UTF-8"
+    chunked_content1 = "dsflsjdlfdsllfjsdlfjldsflsdjfljlsdjlfkjlsdlflsdjlfjsdjlfjlskdf" 
+    content_type = "text/xml; charset=UTF-8"
     received_chunk=""
     received_post_content = ""
     received_content_type = ""
@@ -332,6 +332,7 @@ EORESP
               request_parms[parm] = ENV[parm]
             }
             received_post_content = @http_post_content
+           
             received_chunk = @http_chunked
             received_content_type = ENV["CONTENT_TYPE"]
           end
@@ -342,10 +343,10 @@ EORESP
       cb = proc do
         tcp = TCPSocket.new TestHost, TestPort
         data = [
-          "POST / HTTP/1.1\r\n",
-          "User-Agent: Axis2\r\n",
-          "SOAPAction: \"urn:siemens:names:prov:gw:SPML:2:0/searchRequest\"\r\n",
+          "POST /ProvisioningGateway/services/SPMLSubscriber10Service HTTP/1.1\r\n",
           "Content-type: #{content_type}\r\n",
+          "SOAPAction: \"urn:gw:SPML:2:0/modifyRequest\"\r\n",
+          "User-Agent: Axis2\r\n",
           "Transfer-Encoding: chunked\r\n",
           "\r\n",
           "#{chunked_content1.length.to_s(16)}\r\n",
@@ -353,6 +354,7 @@ EORESP
           "0\r\n",
           "\r\n"
         ].join
+       # puts "Message: \n#{data}"
         tcp.write(data)
         received_response = tcp.read
       end
