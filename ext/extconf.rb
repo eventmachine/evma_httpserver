@@ -64,7 +64,7 @@ when /solaris/
   flags << '-D OS_SOLARIS8'
   flags << '-D BUILD_FOR_RUBY'
 
-  dir_config('ssl')
+  pkg_config('openssl') || dir_config('ssl')
   if have_library('ssl') and
 	  have_library('crypto') and
 	  have_header('openssl/ssl.h') and
@@ -81,7 +81,7 @@ when /darwin/
   flags << '-DOS_UNIX'
   flags << '-DBUILD_FOR_RUBY'
 
-  dir_config('ssl')
+  pkg_config('openssl') || dir_config('ssl')
   if have_library('ssl') and
 	  have_library('crypto') and
 	  have_library('C') and
@@ -103,7 +103,7 @@ else
   flags << '-DOS_UNIX'
   flags << '-DBUILD_FOR_RUBY'
 
-  dir_config('ssl')
+  pkg_config('openssl') || dir_config('ssl')
   if have_library('ssl') and
 	  have_library('crypto') and
 	  have_header('openssl/ssl.h') and
