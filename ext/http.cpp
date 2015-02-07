@@ -75,6 +75,8 @@ HttpConnection_t::HttpConnection_t()
 	// instead of buffering it here. To get the latter behavior, user code must call
 	// dont_accumulate_post.
 	bAccumulatePost = true;
+  
+  
 }
 
 
@@ -84,8 +86,10 @@ HttpConnection_t::~HttpConnection_t
 
 HttpConnection_t::~HttpConnection_t()
 {
-	if (_Content)
+	if (_Content) {
 		free (_Content);
+    _Content = NULL;
+  }
 }
 
 
@@ -125,7 +129,8 @@ void HttpConnection_t::ProcessRequest (const char *method,
 		int post_length,
 		const char *post_content,
 		const char *hdrblock,
-		int hdrblocksize)
+		int hdrblocksize,
+    int content_chunked)
 {
   cerr << "UNIMPLEMENTED ProcessRequest" << endl;
 }
@@ -141,11 +146,12 @@ void HttpConnection_t::ReceivePostData (const char *data, int len)
 }
 
 /*****************************
-HttpConnection_t::ConsumeData
+HttpConnection_t::  
 *****************************/
 
 void HttpConnection_t::ConsumeData (const char *data, int length)
 {
+
 	if (ProtocolState == EndState)
 		return;
 
@@ -153,6 +159,7 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 		throw std::runtime_error ("bad args consuming http data");
 
 	while (length > 0) {
+  
 		//----------------------------------- BaseState
 		// Initialize for a new request. Don't consume any data.
 		// For anal-retentive security we may want to bzero the header block.
@@ -162,7 +169,13 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			HeaderLinePos = 0;
 			HeaderBlockPos = 0;
 			ContentLength = 0;
+      ContentChunked = 0;
+      TrailerProcessing = 0;
 			ContentPos = 0;
+      Chunk_req_received = 0;
+      foundsemi = 0;
+      foundslashr = 0;
+      chunklen = 0;
 			bRequestSeen = false;
 			bContentLengthSeen = false;
 			if (_Content) {
@@ -214,6 +227,8 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			}
 			else
 				ProtocolState = HeaderState;
+       
+      //sleep(30);
 		}
 
 		//----------------------------------- HeaderState
@@ -240,9 +255,31 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 						ContentPos = 0;
 						ProtocolState = ReadingContentState;
 					}
-					else
+          else if (ContentChunked){
+              if (_Content){
+                free (_Content);
+              }
+              _Content = NULL;
+              ContentPos = 0;
+              ProtocolState = ReadingChunkLen;
+              //clear our header buffer, reset flags
+              memset(chunklen_s, '\0',10); 
+              foundsemi = 0;
+              foundslashr = 0;
+               foundslashn = 0;
+              chunklen = 0;
+              ContentChunked = 0;
+          }          
+					else{
+            if(TrailerProcessing){
+              ContentLength = ContentPos;
+              Chunk_req_received = 1;
+            }
+            // We will come to here for GET or Chunked POST.
 						ProtocolState = DispatchState;
+          }
 				}
+
 				HeaderLinePos = 0;
 				data++;
 				length--;
@@ -255,10 +292,12 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			else {
 				const char *nl = strpbrk (data, "\r\n");
 				int len = nl ? (nl - data) : length;
+        
 				if ((size_t)(HeaderLinePos + len) >= sizeof(HeaderLine)) {
 					// TODO, log this
 					goto fail_connection;
 				}
+        
 				memcpy (HeaderLine + HeaderLinePos, data, len);
 				data += len;
 				length -= len;
@@ -271,9 +310,9 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 		// Read POST content.
 		while ((ProtocolState == ReadingContentState) && (length > 0)) {
 			int len = ContentLength - ContentPos;
-			if (len > length)
+			if (len > length){
 				len = length;
-
+      }
 			if (bAccumulatePost)
 				memcpy (_Content + ContentPos, data, len);
 			else
@@ -283,16 +322,142 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 			length -= len;
 			ContentPos += len;
 			if (ContentPos == ContentLength) {
-				if (bAccumulatePost)
+				if (bAccumulatePost){
 					_Content[ContentPos] = 0;
-				ProtocolState = DispatchState;
+				}
+        ProtocolState = DispatchState;
 			}
 		}
+   
+    int chunklen_pos = 0;
+		//----------------------------------- ReadingChunkLen
+		// Read POST chunked content.   
+    while ((ProtocolState == ReadingChunkLen) && length > 0)
+    {  
+      if(*data == ';')
+      {
+        //The standards say that there can be a semi-colon after the chunk length, plus some data;
+        foundsemi = 1;
+      }
+      else if(*data == '\r')
+      {
+        foundslashr =1;
+      }
+      else if(*data == '\n')
+      {
+        //If we find a slash n without a slash r then this message is malformatted
+        if(! foundslashr)
+        {
+          goto send_error;
+        }
+        foundslashn = 1;
+      }
+      else
+      {
+        if( ! foundsemi )
+        {
+          chunklen_s[chunklen_pos] = *data;
+          chunklen_pos++;
+        }
+      }    
+      
+      data = data+1;
+      length--;
+      if (foundslashn)
+      {
+        //convert the length to a long
+        chunklen = (int)strtol ( chunklen_s, NULL, 16 );    
+        if (chunklen == 0 )
+        {
+          ProtocolState = HeaderState;
+          
+        }
+        else
+        {
+          ProtocolState = ReadingChunkedContent;
+        }
+      }
+    }
+    int readamount =0;
+    int readischunk=0;
+		//----------------------------------- ReadingChunkedContent
+		// Read POST chunked content.
+    while ((ProtocolState == ReadingChunkedContent && length > 0))
+    {
+      
+      if(length <= chunklen)
+      {
+        readamount = length;
+        chunklen-=length;
+        
+      }
+      else 
+      {
+        readischunk = 1;
+        readamount = chunklen;
+      }
 
+      char *_temp_content = NULL;
+      //copy to temp variable so we don't overwrite _Content with null if we can't alloc.
+      _temp_content = (char*) realloc(_Content, ContentPos + readamount + 1);
+      
+      if (!_temp_content){
+        // free(_Content);
+        // _Content = NULL;
+        throw std::runtime_error ("resource exhaustion");
+      }
+      _Content = _temp_content;
+      
+      memcpy(_Content + ContentPos, data, readamount);
+      ContentPos += readamount;
+      _Content[ContentPos] = '\0';
+      data += readamount;
+      length -= readamount;
+
+      //If we just read the entire chunk then we can expect the next 
+      // two characters to be \r\n
+      if(readischunk)
+      {
+        if(*data != '\r')
+        {
+            goto send_error;   
+        }
+        
+        data++;
+        length--;
+        
+        if(*data != '\n')
+        {
+            goto send_error;
+        }
+        data++;
+        length--;
+        ProtocolState = ReadingChunkLen;
+        memset(chunklen_s, '\0',10); //clear our header buffer.
+        foundsemi = 0;
+        foundslashr = 0;
+        chunklen = 0;
+        foundslashn = 0;
+      }
+
+    }
 
 		//----------------------------------- DispatchState
 		if (ProtocolState == DispatchState) {
-			ProcessRequest (RequestMethod, Cookie.c_str(), IfNoneMatch.c_str(), ContentType.c_str(), QueryString.c_str(), PathInfo.c_str(), RequestUri.c_str(), Protocol.c_str(), ContentLength, _Content, HeaderBlock, HeaderBlockPos);
+			ProcessRequest (RequestMethod, 
+                      Cookie.c_str(), 
+                      IfNoneMatch.c_str(), 
+                      ContentType.c_str(), 
+                      QueryString.c_str(), 
+                      PathInfo.c_str(), 
+                      RequestUri.c_str(), 
+                      Protocol.c_str(), 
+                      ContentLength, 
+                      _Content, 
+                      HeaderBlock, 
+                      HeaderBlockPos, 
+                      Chunk_req_received);
+                      
 			ProtocolState = BaseState;
 		}
 	}
@@ -317,7 +482,6 @@ void HttpConnection_t::ConsumeData (const char *data, int length)
 /**************************************
 HttpConnection_t::_InterpretHeaderLine
 **************************************/
-
 bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 {
 	/* Return T/F to indicate whether we should continue processing
@@ -389,6 +553,12 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 			setenv ("IF_NONE_MATCH", s, true);
 	}
 	else if (!strncasecmp (header, "Content-type:", 13)) {
+    //If we receive this header after we have processed chunked data
+    //send an error.
+    if(TrailerProcessing){
+      _SendError (RESPONSE_CODE_406);
+      return false;
+    }
 		const char *s = header + 13;
 		while (*s && ((*s==' ') || (*s=='\t')))
 			s++;
@@ -396,8 +566,26 @@ bool HttpConnection_t::_InterpretHeaderLine (const char *header)
 		if (bSetEnvironmentStrings)
 			setenv ("CONTENT_TYPE", s, true);
 	}
-
-
+	else if (!strncasecmp (header, "Transfer-Encoding:", 18)) {
+    if(TrailerProcessing){
+      _SendError (RESPONSE_CODE_406);
+      return false;
+    }
+		const char *s = header + 18;
+		while (*s && ((*s==' ') || (*s=='\t')))
+			s++;
+		if (!strncasecmp (s, "chunked", 7)){
+      TrailerProcessing = 1;
+      ContentChunked = 1;
+    }
+    
+	}
+  else if (!strncasecmp (header, "Trailer:", 8)) {
+    if(TrailerProcessing){
+      _SendError (RESPONSE_CODE_406);
+      return false;
+    }
+  }
 	// Copy the incoming header into a block
 	if ((HeaderBlockPos + strlen(header) + 1) < HeaderBlockSize) {
 		int len = strlen(header);
