@@ -36,96 +36,93 @@ class HttpConnection_t
 
 class HttpConnection_t
 {
-	public:
-		HttpConnection_t();
-		virtual ~HttpConnection_t();
+  public:
+    HttpConnection_t();
+    virtual ~HttpConnection_t();
 
-		void ConsumeData (const char*, int);
+    void ConsumeData (const char*, int);
 
-		virtual void SendData (const char*, int);
-		virtual void CloseConnection (bool after_writing);
-		virtual void ProcessRequest (const char *method,
-				const char *cookie,
-				const char *ifnonematch,
-				const char *content_type,
-				const char *query_string,
-				const char *path_info,
-				const char *request_uri,
-				const char *protocol,
-				int postlength,
-				const char *postdata,
-				const char* hdrblock,
-				int hdrblksize,
-        int content_chunked);
+    virtual void SendData (const char*, int);
+    virtual void CloseConnection (bool after_writing);
+    virtual void ProcessRequest (const char *method,
+    const char *cookie,
+    const char *ifnonematch,
+    const char *content_type,
+    const char *query_string,
+    const char *path_info,
+    const char *request_uri,
+    const char *protocol,
+    int postlength,
+    const char *postdata,
+    const char* hdrblock,
+    int hdrblksize,
+    int content_chunked);
 
-		virtual void ReceivePostData(const char *data, int len);
-		virtual void SetNoEnvironmentStrings() {bSetEnvironmentStrings = false;}
-		virtual void SetDontAccumulatePost() {bAccumulatePost = false;}
+    virtual void ReceivePostData(const char *data, int len);
+    virtual void SetNoEnvironmentStrings() {bSetEnvironmentStrings = false;}
+    virtual void SetDontAccumulatePost() {bAccumulatePost = false;}
 
   private:
 
-		enum {
-			BaseState,
-			PreheaderState,
-			HeaderState,
-			ReadingContentState,
+    enum {
+      BaseState,
+      PreheaderState,
+      HeaderState,
+      ReadingContentState,
       ReadingChunkLen,
       ReadingChunkedContent,
-			DispatchState,
-			EndState
-		} ProtocolState;
+      DispatchState,
+      EndState
+    } ProtocolState;
 
-		enum {
-			MaxLeadingBlanks = 12,
-			MaxHeaderLineLength = 8 * 1024,
-			MaxContentLength = 20 * 1024 * 1024,
-			HeaderBlockSize = 16 * 1024
-		};
-		int nLeadingBlanks;
+    enum {
+      MaxLeadingBlanks = 12,
+      MaxHeaderLineLength = 8 * 1024,
+      MaxContentLength = 20 * 1024 * 1024,
+      HeaderBlockSize = 16 * 1024
+    };
+    int nLeadingBlanks;
 
-		char HeaderLine [MaxHeaderLineLength];
-		int HeaderLinePos;
+    char HeaderLine [MaxHeaderLineLength];
+    int HeaderLinePos;
 
-		char HeaderBlock [HeaderBlockSize];
-		int HeaderBlockPos;
+    char HeaderBlock [HeaderBlockSize];
+    int HeaderBlockPos;
 
-		int ContentLength;
+    int ContentLength;
     int ContentChunked;
     int TrailerProcessing;
-		int ContentPos;
-		char *_Content;
+    int ContentPos;
+    char *_Content;
     int Chunk_req_received;
-    
+
     char  chunklen_s[10];
     int foundsemi;
     int foundslashr;
     int chunklen;
     int foundslashn;
 
-		bool bSetEnvironmentStrings;
-		bool bAccumulatePost;
-		bool bRequestSeen;
-		bool bContentLengthSeen;
+    bool bSetEnvironmentStrings;
+    bool bAccumulatePost;
+    bool bRequestSeen;
+    bool bContentLengthSeen;
 //    ofstream programlog;
 
-		const char *RequestMethod;
-		std::string Cookie;
-		std::string IfNoneMatch;
-		std::string ContentType;
-		std::string PathInfo;
-		std::string RequestUri;
-		std::string QueryString;
-		std::string Protocol;
+    const char *RequestMethod;
+    std::string Cookie;
+    std::string IfNoneMatch;
+    std::string ContentType;
+    std::string PathInfo;
+    std::string RequestUri;
+    std::string QueryString;
+    std::string Protocol;
 
-	private:
+  private:
     int _GetChunkLength(const char *, int *, int *);
-		bool _InterpretHeaderLine (const char*);
-		bool _InterpretRequest (const char*);
-		bool _DetectVerbAndSetEnvString (const char*, int);
-		void _SendError (const char*);
+    bool _InterpretHeaderLine (const char*);
+    bool _InterpretRequest (const char*);
+    bool _DetectVerbAndSetEnvString (const char*, int);
+    void _SendError (const char*);
 };
 
 #endif // __HttpPersonality__H_
-
-
-
