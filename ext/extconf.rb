@@ -40,8 +40,8 @@ when 'mswin32', 'mingw32', 'bccwin32'
 
   flags << "-D OS_WIN32"
   flags << '-D BUILD_FOR_RUBY'
-  flags << "-EHs"
-  flags << "-GR"
+  #flags << "-EHs"
+  #flags << "-GR"
 
   dir_config('ssl')
   if have_library('ssleay32') and
