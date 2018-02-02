@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new("> 0.0.0")
   s.rubygems_version = %q{1.3.7}
   s.summary = %q{EventMachine HTTP Server}
+  s.license = 'LGPL-2.1'
 
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
