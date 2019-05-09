@@ -201,8 +201,6 @@ module EventMachine
       elsif @multiparts
         @multipart_boundary = self.class.concoct_multipart_boundary
         @headers["Content-Type"] = "multipart/x-mixed-replace; boundary=\"#{@multipart_boundary}\""
-      else
-        @headers["Content-Length"] = 0
       end
     end
 
